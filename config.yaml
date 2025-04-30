@@ -1,0 +1,37 @@
+# config.yaml (Sample)
+
+ticker: MSTR
+entry_iv_rank_threshold: 30
+target_put_profit_percent: 34
+max_time_holding_days: 120
+loc_deployment_percent: 0.25
+max_position_size_dollars: 500000
+slack_webhook_url: YOUR_SLACK_WEBHOOK_URL
+gcp_secret_project_id: your-gcp-project-id
+database_url: sqlite:///trade_tracker.db
+sender_email: your_sender_email@gmail.com
+receiver_email: your_receiver_email@gmail.com
+
+# === config.yaml Update Example ===
+
+assets:
+  MSTR:
+    strategy: leap_puts
+    max_position_size: 500000
+    entry_iv_rank_threshold: 30
+  BTC:
+    strategy: swing_volatility
+    max_position_size: 250000
+    entry_volatility_threshold: 50
+  ETH:
+    strategy: swing_volatility
+    max_position_size: 150000
+    entry_volatility_threshold: 55
+  COIN:
+    strategy: leap_puts
+    max_position_size: 300000
+    entry_iv_rank_threshold: 35
+  QQQ:
+    strategy: hedging
+    max_position_size: 200000
+    trigger_market_downturn: true

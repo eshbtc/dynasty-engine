@@ -1,0 +1,91 @@
+# ------------------------------------------------------------------
+# deploy_bluegreen.yaml  (S‑C) – Cloud Build snippet for Blue/Green
+# ------------------------------------------------------------------
+# This assumes you have a Cloud Build trigger set up.
+# Replace $PROJECT_ID with your actual GCP project ID.
+# Assumes Cloud Run services 'dynasty-staging' and 'dynasty-prod' exist.
+
+steps:
+# Build the new Docker image and tag it with the commit SHA
+- name: 'gcr.io/cloud-builders/docker'
+  id: Build
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/dynasty:$COMMIT_SHA', '.']
+
+# Push the image to Google Container Registry
+- name: 'gcr.io/cloud-builders/docker'
+  id: Push
+  args: ['push', 'gcr.io/$PROJECT_ID/dynasty:$COMMIT_SHA']
+
+# Deploy the new image to the 'staging' service with 0% traffic
+# Allows verification before shifting production traffic.
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: DeployStaging
+  args:
+    - 'run'
+    - 'deploy'
+    - 'dynasty-staging'
+    - '--image'
+    - 'gcr.io/$PROJECT_ID/dynasty:$COMMIT_SHA'
+    - '--platform'
+    - 'managed'
+    - '--region'
+    - 'us-central1'
+    - '--no-traffic' # Deploy revision but send no traffic initially
+    - '--tag=sha-$COMMIT_SHA' # Optional: Tag revision for easier identification
+  waitFor: ['Push'] # Wait for image push to complete
+
+# Optional: Add manual approval step here in Cloud Build if desired
+# - name: 'gcr.io/cloud-builders/gcloud'
+#   id: ManualApproval
+#   args: ['alpha', 'builds', 'approve', '$BUILD_ID', '--region=us-central1']
+#   waitFor: ['DeployStaging']
+
+# Simple Health Check: Wait and then curl the staging URL
+# Replace with more robust integration/smoke tests if needed.
+- name: 'bash'
+  id: HealthCheck
+  args:
+    - '-c'
+    - | # Use pipe for multi-line bash script
+      echo "Waiting 30 seconds for staging deployment to stabilize..."
+      sleep 30
+      STAGING_URL=$(gcloud run services describe dynasty-staging --platform managed --region us-central1 --format 'value(status.url)')
+      echo "Pinging staging URL: $STAGING_URL"
+      # Use /_stcore/health for Streamlit's built-in health check if applicable
+      # Adjust the health endpoint path as needed
+      HEALTH_PATH="/_stcore/health"
+      if curl -sf --connect-timeout 10 --max-time 20 "$STAGING_URL$HEALTH_PATH"; then
+        echo "Staging health check passed."
+      else
+        echo "Staging health check failed! Aborting traffic shift."
+        exit 1
+      fi
+  waitFor: ['DeployStaging'] # Wait for staging deployment
+  # Add 'ManualApproval' to waitFor if using manual approval step
+
+# Gradually shift traffic: 10% to new revision (on staging service), 90% to latest prod revision
+# Assumes 'dynasty-staging' receives the new code and 'dynasty-prod' is the stable service.
+# Adjust percentages and strategy as needed (e.g., shift traffic on 'dynasty-prod' directly)
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: UpdateTraffic
+  args:
+    - 'run'
+    - 'services'
+    - 'update-traffic'
+    - 'dynasty-prod' # Target the production service for traffic split
+    # Send 10% traffic to the latest revision of dynasty-staging
+    # Send remaining 90% traffic to the latest revision of dynasty-prod (LATEST)
+    - '--to-revisions=dynasty-staging=LATEST:10,dynasty-prod=LATEST:90'
+    - '--platform'
+    - 'managed'
+    - '--region'
+    - 'us-central1'
+  waitFor: ['HealthCheck'] # Wait for health check to pass
+
+# Optional: Add further steps for 100% traffic shift after monitoring, or cleanup old revisions.
+
+images:
+- 'gcr.io/$PROJECT_ID/dynasty:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

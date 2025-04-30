@@ -1,0 +1,48 @@
+name: Nightly RL Training
+
+on:
+  schedule:
+    # UTC 07:00 every day
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch latest market data
+        run: |
+          python scripts/data_fetch_polygon.py \
+            --symbol MSTR \
+            --start $(date -u -d '365 days ago' +'%Y-%m-%d') \
+            --end $(date -u +'%Y-%m-%d') \
+            --out data/mstr_raw.parquet
+        env:
+          POLYGON_KEY: ${{ secrets.POLYGON_KEY }}
+
+      - name: Feature engineering
+        run: python scripts/feature_engineering.py --in data/mstr_raw.parquet --out data/mstr_features.parquet
+
+      - name: Hyper-parameter search
+        run: python rl/hyperparam_search.py --csv data/mstr_features.parquet --symbol MSTR --trials 30
+
+      - name: Commit updated models
+        run: |
+          git config user.name 'github-actions'
+          git config user.email 'github-actions@users.noreply.github.com'
+          git add models
+          git commit -m 'auto: nightly RL model update' || echo 'No changes to commit'
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

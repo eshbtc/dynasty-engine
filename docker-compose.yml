@@ -1,0 +1,19 @@
+version: '3.9'
+services:
+  dynasty-engine:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"  # prometheus metrics
+      - "9001:9001"  # health
+
+  lp-portal:
+    build:
+      context: ./lp-portal
+    env_file:
+      - lp-portal/.env.example  # replace with .env or secrets in prod
+    ports:
+      - "3000:3000"
+    depends_on:
+      - dynasty-engine

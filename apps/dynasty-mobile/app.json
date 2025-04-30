@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Dynasty Mobile",
+    "slug": "dynasty-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "sdkVersion": "50.0.0",
+    "platforms": ["ios"],
+    "primaryColor": "#4f46e5",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dynasty.engine"
+    },
+    "extra": {
+      "API_BASE": "https://dynasty.example.com"
+    }
+  }
+}

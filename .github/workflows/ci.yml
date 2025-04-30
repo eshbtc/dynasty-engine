@@ -1,0 +1,32 @@
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      # Ensure requirements.txt exists and lists all dependencies
+      - run: pip install -e .[dev]
+      - run: black --check .
+      - run: ruff .
+      - run: mypy dyn_engine || true  # don't fail yet; informational
+      # Adjust pytest command based on your test directory structure if needed
+      - run: pytest -q --cov=dyn_engine
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+  portal:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lp-portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build

@@ -1,0 +1,32 @@
+# Prometheus Recording Rules for Dynasty Engine Risk Metrics
+# Add this file path to your Prometheus configuration's 'rule_files' list.
+groups:
+  - name: dynasty-risk-rules
+    interval: 1m # How often to evaluate the rules
+    rules:
+      # Rule 1: Calculate 1-minute rate of change in PnL
+      # This represents the return over the last minute.
+      # Requires 'dynasty_cumulative_pnl' metric to be available.
+      - record: dynasty:pnl:rate1m
+        expr: rate(dynasty_cumulative_pnl[1m])
+        labels:
+          job: dynasty-engine # Inherit or define appropriate labels
+
+      # Rule 2: Calculate 5% Value-at-Risk (VaR) based on recent volatility
+      # Uses standard deviation of 1-minute returns over the last 60 minutes.
+      # Assumes returns are somewhat normally distributed for the z-score (1.645) to be valid.
+      # Scales volatility to a 1-day horizon (assuming 1440 minutes per day -> sqrt(1440) ~ 38, but using sqrt(60*24) might be clearer)
+      # Simple VaR - does not account for fat tails or specific distribution models.
+      # Ensure 'dynasty:pnl:rate1m' has enough data points (e.g., runs for >60m).
+      - record: dynasty_var_5p # Matches the metric name used in Grafana dashboard
+        expr: >
+          # Calculate 1-hour standard deviation of 1-minute returns
+          # Multiply by z-score for 5% (1.645)
+          # Multiply by -1 because VaR is typically expressed as a positive loss value
+          # Scale to a potential 1-day loss (sqrt(minutes_in_day/minutes_in_stdev_period) = sqrt(1440/60) = sqrt(24))
+          # Adjust scaling factor based on your risk horizon and assumptions
+          -1.645 * stddev_over_time(dynasty:pnl:rate1m[60m]) * sqrt(24) 
+        labels:
+          job: dynasty-engine # Inherit or define appropriate labels
+          quantile: "0.05"
+          horizon: "1d"

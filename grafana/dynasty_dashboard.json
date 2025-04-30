@@ -1,0 +1,95 @@
+{
+  "uid": "dynasty-overview",
+  "title": "Dynasty Engine – Overview",
+  "schemaVersion": 37,
+  "version": 1,
+  "tags": ["dynasty", "trading"],
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Engine Health",
+      "id": 1,
+      "datasource": "Prometheus",
+      "targets": [
+        {"expr": "dynasty_health_status", "legendFormat": "Health"}
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "#F2495C", "value": null}, {"color": "#73BF69", "value": 1}]}, "mappings": [{"type": 1, "options": {"0": {"text": "Error"}, "1": {"text": "OK"}}}]},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0}
+    },
+    {
+      "type": "graph",
+      "title": "Drawdown %",
+      "id": 2,
+      "datasource": "Prometheus",
+      "targets": [{"expr": "dynasty_drawdown_pct", "legendFormat": "drawdown"}],
+      "gridPos": {"h": 8, "w": 8, "x": 4, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "percent"}, "overrides": []}
+    },
+    {
+      "type": "bar gauge",
+      "title": "Trades Executed (rate 5m)",
+      "id": 3,
+      "datasource": "Prometheus",
+      "targets": [{"expr": "sum(rate(dynasty_trade_total[5m])) by (kind, status)", "legendFormat": "{{kind}} – {{status}}"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+    },
+    {
+      "type": "stat",
+      "title": "Commissions Paid (1h)",
+      "id": 4,
+      "datasource": "Prometheus",
+      "targets": [{"expr": "increase(dynasty_trade_fee_total[1h])", "legendFormat": "fees"}],
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []}
+    },
+    {
+      "type": "heatmap",
+      "title": "Slippage Distribution (bp)",
+      "id": 5,
+      "datasource": "Prometheus",
+      "targets": [{"expr": "sum(rate(dynasty_trade_slippage_bp_bucket[5m])) by (le)", "legendFormat": "slippage"}],
+      "heatmap": {},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+    },
+    {
+      "type": "graph",
+      "title": "Eval Assets Latency p90 (s)",
+      "id": 6,
+      "datasource": "Prometheus",
+      "targets": [{"expr": "histogram_quantile(0.9, sum(rate(dynasty_eval_assets_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p90"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+    },
+    {
+      "type": "graph",
+      "title": "Eval Hedges Latency p90 (s)",
+      "id": 7,
+      "datasource": "Prometheus",
+      "targets": [{"expr": "histogram_quantile(0.9, sum(rate(dynasty_eval_hedges_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p90"}],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+    },
+    {
+      "type": "table",
+      "title": "Errors by Module (1h)",
+      "id": 8,
+      "datasource": "Prometheus",
+      "targets": [{"expr": "sum(increase(dynasty_error_total[1h])) by (module)", "legendFormat": "{{module}}"}],
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 20}
+    }
+  ],
+  "editable": true,
+  "refresh": "30s"
+}
