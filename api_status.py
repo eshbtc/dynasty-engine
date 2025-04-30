@@ -10,13 +10,6 @@ app = FastAPI()
 import sqlite3
 import pandas as pd
 import datetime
-from flask_cors import CORS
-from prometheus_client import make_wsgi_app
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
-import threading
-
-app = Flask(__name__)
-CORS(app)
 
 # --- Prometheus Metrics Integration ---
 try:
@@ -80,11 +73,9 @@ import glob
 from flask import send_file, request
 
 # --- Backtest List Endpoint ---
-@app.route('/api/backtest_list')
-def backtest_list():
-    import os, json
+@app.get('/api/backtests')
+async def list_backtests():
     folder = 'data/backtests'
-    os.makedirs(folder, exist_ok=True)
     files = sorted(glob.glob(os.path.join(folder, '*.json')), reverse=True)
     summaries = []
     for f in files:
@@ -96,29 +87,28 @@ def backtest_list():
             summaries.append(summary)
         except Exception:
             continue
-    return jsonify({'backtests': summaries})
+    return JSONResponse({'backtests': summaries})
 
 # --- Backtest Results Endpoint (specific file) ---
-@app.route('/api/backtest_results')
-def backtest_results():
-    import os, json
-    fname = request.args.get('file')
-    if fname:
-        path = os.path.join('data/backtests', fname)
+@app.get('/api/backtest_results')
+async def backtest_results(file: str = Query(None)):
+    if file:
+        path = os.path.join('data/backtests', file)
     else:
         # fallback to legacy single file
         path = 'data/backtest_results.json'
     if os.path.exists(path):
         with open(path) as f:
             results = json.load(f)
-        return jsonify(results)
-    return jsonify({})
+        return JSONResponse(results)
+    return JSONResponse({})
 
 # --- Backtest Trades CSV Download ---
-@app.route('/api/backtest_trades')
-def backtest_trades():
-    import os, json, csv, io
-    fname = request.args.get('file')
+@app.get('/api/backtest_trades')
+async def backtest_trades(file: str = Query(None)):
+    if not file:
+        return JSONResponse({'error': 'Missing file param'}, status_code=400)
+    path = os.path.join('data/backtests', file)
     if not fname:
         return ('Missing file param', 400)
     path = os.path.join('data/backtests', fname)
