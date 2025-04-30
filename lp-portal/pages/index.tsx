@@ -1,7 +1,6 @@
 // lp-portal/pages/index.tsx
 import React, { useEffect, useState } from 'react';
-import { GetServerSideProps } from 'next';
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import { supa } from '../lib/supa';
 
@@ -16,6 +15,25 @@ interface SupabaseFile {
 }
 
 export default function Home() {
+    const router = useRouter();
+    const [authLoading, setAuthLoading] = useState(true);
+    const [user, setUser] = useState<any>(null);
+
+    // Client-side Supabase auth check
+    useEffect(() => {
+        supa.auth.getUser().then(({ data }) => {
+            setUser(data.user);
+            setAuthLoading(false);
+            if (!data.user) {
+                router.replace('/login');
+            }
+        });
+    }, [router]);
+
+    if (authLoading) return null; // Or a spinner
+    if (!user) return null; // Will redirect
+
+    // --- rest of your Home state and logic ---
     const [pnl, setPnl] = useState<string | null>(null);
     const [links, setLinks] = useState<SupabaseFile[]>([]); // Use specific type
     const [error, setError] = useState<string | null>(null);
@@ -429,16 +447,24 @@ export default function Home() {
         );
 }
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-    const supabase = createServerSupabaseClient(ctx);
-    const { data: { user } } = await supabase.auth.getUser();
+// Client-side auth check to replace SSR redirect
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
+
+export default function Home() {
+    // ...existing state and logic...
+    const router = useRouter();
+    const user = supa.auth.user ? supa.auth.user() : null;
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !user) {
+            router.replace('/login');
+        }
+    }, [user, router]);
+
     if (!user) {
-        return {
-            redirect: {
-                destination: '/login',
-                permanent: false,
-            },
-        };
+        return null; // Or a loading spinner
     }
-    return { props: {} };
-};
+
+    // ...rest of your Home component...
+}
