@@ -21,12 +21,10 @@ function MyApp({ Component, pageProps }: AppProps) {
         const expires_in = params.get('expires_in');
         const token_type = params.get('token_type');
 
-        if (access_token && refresh_token && token_type) {
+        if (access_token && refresh_token) {
           supa.auth.setSession({
             access_token,
             refresh_token,
-            expires_in: Number(expires_in),
-            token_type,
           }).then(() => {
             // Clean up the URL and redirect to the main page
             window.location.replace('/');
