@@ -18,22 +18,6 @@ export default function Home() {
     const router = useRouter();
     const [authLoading, setAuthLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
-
-    // Client-side Supabase auth check
-    useEffect(() => {
-        supa.auth.getUser().then(({ data }) => {
-            setUser(data.user);
-            setAuthLoading(false);
-            if (!data.user) {
-                router.replace('/login');
-            }
-        });
-    }, [router]);
-
-    if (authLoading) return null; // Or a spinner
-    if (!user) return null; // Will redirect
-
-    // --- rest of your Home state and logic ---
     const [pnl, setPnl] = useState<string | null>(null);
     const [links, setLinks] = useState<SupabaseFile[]>([]); // Use specific type
     const [error, setError] = useState<string | null>(null);
@@ -49,15 +33,25 @@ export default function Home() {
     const [backtest, setBacktest] = useState<any>(null);
     // Drill-down modal state
     const [drillSymbol, setDrillSymbol] = useState<string | null>(null);
-
     // SWR fetcher
     const fetcher = (url: string) => fetch(url).then((r) => r.json());
     const { data: pnlResp, error: pnlErr } = useSWR('/api/pnl', fetcher, {
         refreshInterval: 15000,
     });
-
     // Auto-refresh and last update
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+    // Client-side Supabase auth check
+    useEffect(() => {
+        supa.auth.getUser().then(({ data }) => {
+            setUser(data.user);
+            setAuthLoading(false);
+            if (!data.user) {
+                router.replace('/login');
+            }
+        });
+    }, [router]);
+
     useEffect(() => {
         const fetchAll = () => {
             fetch('/api/rl_status').then(r => r.json()).then(setRlStatus).catch(() => {});
