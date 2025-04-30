@@ -23,4 +23,5 @@ COPY . .
 # Run Streamlit on the port specified by Cloud Run
 # Note: EXPOSE is documentation; Cloud Run uses the PORT env var directly.
 # EXPOSE 8080 # Or whatever PORT is set to
-CMD streamlit run dashboard.py --server.port=${PORT:-8080}
+# Start both Streamlit and healthcheck server for Cloud Run compatibility
+CMD bash -c "streamlit run dashboard.py --server.port=${PORT:-8080} & python healthcheck.py"

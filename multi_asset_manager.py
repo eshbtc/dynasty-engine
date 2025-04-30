@@ -118,8 +118,9 @@ class AssetAllocator:
         if expected_mu is None or sigma is None or expected_mu == 'PLACEHOLDER' or sigma == 'PLACEHOLDER':
             logger.warning(f"[Dynasty Multi-Asset] Missing or placeholder expected_mu/sigma for {symbol}. Skipping Kelly sizing and trade.")
             return None
-0) # Example: 10% expected annual return
-        expected_sigma = asset_settings.get('expected_sigma', 0.20) # Example: 20% annual volatility
+        # Optionally, set defaults for expected_mu and expected_sigma if needed
+        # expected_mu = asset_settings.get('expected_mu', 0.10) # Example: 10% expected annual return
+        # expected_sigma = asset_settings.get('expected_sigma', 0.20) # Example: 20% annual volatility
         # --- End Placeholder ---
 
         # Build RL observation vector (example: price, iv_rank or vol) – extend as needed
