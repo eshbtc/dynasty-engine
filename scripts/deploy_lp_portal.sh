@@ -10,7 +10,7 @@ IMG="$REGION-docker.pkg.dev/$PROJECT/dynasty/${SERVICE}:$(git rev-parse --short 
 
 pushd lp-portal
   echo "[Portal] Building image $IMG …"
-  docker build -t "$IMG" .
+  docker build --platform linux/amd64 -t "$IMG" .
   docker push "$IMG"
 popd
 
