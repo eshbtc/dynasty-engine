@@ -24,3 +24,4 @@ optuna>=3.2.0
 prometheus_client>=0.17.0
 gunicorn
 flask
+flask_cors
