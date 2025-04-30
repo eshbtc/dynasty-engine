@@ -3,7 +3,10 @@
 
 import os
 import json
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
+import sqlite3
+import pandas as pd
+import datetime
 from flask_cors import CORS
 from prometheus_client import make_wsgi_app
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
@@ -128,6 +131,49 @@ def backtest_trades():
         writer.writerow(row)
     output.seek(0)
     return send_file(io.BytesIO(output.read().encode()), mimetype='text/csv', as_attachment=True, download_name='trades.csv')
+
+# --- Trades Table Endpoint ---
+@app.route('/api/trades')
+def get_trades():
+    db_path = 'trade_tracker.db'
+    if not os.path.exists(db_path):
+        return jsonify({'trades': []})
+    try:
+        conn = sqlite3.connect(db_path)
+        df = pd.read_sql_query('SELECT * FROM trades', conn)
+        conn.close()
+        trades = df.to_dict(orient='records')
+        return jsonify({'trades': trades})
+    except Exception as e:
+        return jsonify({'error': str(e), 'trades': []})
+
+# --- Agent Decisions Log Endpoint ---
+@app.route('/api/agent-decisions')
+def get_agent_decisions():
+    csv_path = 'data/agent_decisions.csv'
+    if not os.path.exists(csv_path):
+        return jsonify({'decisions': []})
+    try:
+        df = pd.read_csv(csv_path)
+        decisions = df.tail(50).to_dict(orient='records')
+        return jsonify({'decisions': decisions})
+    except Exception as e:
+        return jsonify({'error': str(e), 'decisions': []})
+
+# --- Bot Command Submission Endpoint ---
+@app.route('/api/commands', methods=['POST'])
+def submit_command():
+    data = request.get_json()
+    command = data.get('command')
+    if not command:
+        return jsonify({'error': 'Missing command'}), 400
+    entry = {"timestamp": str(datetime.datetime.now()), "command": command}
+    try:
+        with open('memory_store.json', 'a') as f:
+            f.write(json.dumps(entry) + "\n")
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8008, debug=True)
