@@ -47,10 +47,10 @@ Legend: **blue numbers** denote stages referenced in §2.
 | 2 | `train_rl.py` | Training | Loads CSV features, spawns `stable-baselines3.PPO`, checkpoints to `model_registry`. |
 |   | `rl/hyperparam_search.py` | Research | Optuna study + cross-val; stores best model with meta-params. |
 |   | `model_registry.py` | Storage | Timestamped directory per symbol (`models/<sym>/<ts>_run`). |
-| 3 | `rl_policy.py` | Inference | Loads latest model + `VecNormalize` & returns discrete action (0 hold / 1 buy / 2 sell). |
-| 4 | `multi_asset_manager.py` | Execution | Builds obs via `feature_builder`, asks RL policy, applies **Kelly sizing** & risk veto before sending orders. |
-| 5 | `dyn_engine/risk_manager.py` | Safety | Tracks max NAV, computes draw-down, honours `settings.dynasty_halt`. |
-| 6 | `metrics_exporter.py` | Telemetry | Exposes Prometheus HTTP on :8000, pushes Expo notifications (`send_push`). |
+| 3 | `rl_policy.py` | Inference | Loads latest model + `VecNormalize`, returns discrete action (0 hold / 1 buy / 2 sell), **robust to missing/corrupt models, logs fallback to HOLD**. |
+| 4 | `multi_asset_manager.py` | Execution | Builds obs via `feature_builder`, asks RL policy, applies **Kelly sizing** & risk veto before sending orders. **Now includes retry logic and robust error handling for data fetches and trading logic.** |
+| 5 | `dyn_engine/risk_manager.py` | Safety | Tracks max NAV, computes draw-down, honours `settings.dynasty_halt`. **Now logs and handles all error paths robustly.** |
+| 6 | `metrics_exporter.py` | Telemetry | Exposes Prometheus HTTP on :8000, pushes Expo notifications (`send_push`). **Prometheus metrics endpoint integrated with Flask API for Cloud Run.** |
 | 7 | `episode_logger.py` | Logging | Appends every RL step to `data/trades_episodes.csv`. |
 | 8 | `reflect.py` | Analytics | Nightly cron summarises step CSV → `daily_summary.parquet`. |
 | 9 | `.github/workflows/rl_train.yml` | CI | Nightly retrain, commits new model, updates dashboard metric. |
@@ -85,7 +85,17 @@ Legend: **blue numbers** denote stages referenced in §2.
 * **Notifications** – Expo push; first app launch registers device token via `/api/register_device`.
 
 ---
-## 6. Roadmap
+## 6. Robustness & Reliability Improvements (Spring 2025)
+- **Comprehensive error handling** added to all core modules (`trading_env.py`, `multi_asset_manager.py`, `rl_policy.py`, `risk_manager.py`, `execution.py`, `backtest_harness.py`).
+- **Retry logic** for asset data fetches and API calls.
+- **Logging** for all error paths and fallbacks (including RL model inference and trade execution).
+- **Prometheus metrics endpoint** integrated directly into Flask API for Cloud Run compatibility.
+- **Dockerfile** updated to use Gunicorn for API serving; Streamlit references removed.
+- **Requirements** cleaned for duplicate/conflicting entries.
+- **Robustness review process**: All critical files reviewed for execution gaps and improved without breaking downstream APIs.
+
+---
+## 7. Roadmap
 1. Adaptive risk limits (vol-scaled).  
 2. Synthetic training (dreamer) to boost data efficiency.  
 3. AWS Secrets Manager migration.  

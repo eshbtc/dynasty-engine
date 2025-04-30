@@ -73,38 +73,41 @@ class RiskManager:
 
     def update_and_check(self, current_equity: float) -> Tuple[bool, float]:
         """Return (should_halt, drawdown_pct)."""
-        if current_equity <= 0:
-            logger.warning("Current equity <= 0 (%.2f)", current_equity)
+        try:
+            if current_equity <= 0:
+                logger.warning("Current equity <= 0 (%.2f)", current_equity)
+                return True, 100.0
+
+            if current_equity > self.max_equity:
+                self.max_equity = current_equity
+            dd_pct = 0.0
+            if self.max_equity > 0:
+                dd_pct = (self.max_equity - current_equity) / self.max_equity * 100.0
+
+            manual_halt = self.cfg.dynasty_halt
+            should_halt = manual_halt or dd_pct > self.drawdown_limit_pct
+
+            # Send one-off push alert if halt triggered
+            if should_halt and not getattr(self, "_alerted", False):
+                try:
+                    from metrics_exporter import send_push, ensure_exporter
+                    ensure_exporter()
+                    msg = (
+                        f"🚨 Dynasty HALT – drawdown {dd_pct:.1f}% exceeds limit"
+                        if not manual_halt
+                        else "⏸ Dynasty HALT – manual flag enabled"
+                    )
+                    send_push(msg)
+                    logger.warning(msg)
+                    self._log_risk_event(msg)
+                except Exception as exc:
+                    logger.error("RiskManager push alert error: %s", exc)
+                self._alerted = True
+
+            return should_halt, dd_pct
+        except Exception as e:
+            logger.error(f"Exception in RiskManager.update_and_check: {e}")
             return True, 100.0
-
-        if current_equity > self.max_equity:
-            self.max_equity = current_equity
-        dd_pct = 0.0
-        if self.max_equity > 0:
-            dd_pct = (self.max_equity - current_equity) / self.max_equity * 100.0
-
-        manual_halt = self.cfg.dynasty_halt
-        should_halt = manual_halt or dd_pct > self.drawdown_limit_pct
-
-        # Send one-off push alert if halt triggered
-        if should_halt and not getattr(self, "_alerted", False):
-            try:
-                from metrics_exporter import send_push, ensure_exporter
-                ensure_exporter()
-                msg = (
-                    f"🚨 Dynasty HALT – drawdown {dd_pct:.1f}% exceeds limit"
-                    if not manual_halt
-                    else "⏸ Dynasty HALT – manual flag enabled"
-                )
-                send_push(msg)
-                logger.warning(msg)
-                self._log_risk_event(msg)
-            except Exception as exc:
-                logger.error("RiskManager push alert error: %s", exc)
-            # Mark to avoid spamming until reset
-            self._alerted = True
-
-        return should_halt, dd_pct
 
     def _log_risk_event(self, msg: str):
         try:

@@ -8,6 +8,17 @@ max_price_gauge = Gauge('dynasty_max_trade_price', 'Maximum Price Recorded in Tr
 # Define VaR Gauges
 var5 = Gauge('dynasty_var_5p', 'Value at Risk 95% over last 60 trades (price % change)', ['asset'])
 var1 = Gauge('dynasty_var_1p', 'Value at Risk 99% over last 60 trades (price % change)', ['asset'])
+# RL analytics gauges
+rl_pnl = Gauge('dynasty_rl_monthly_pnl', 'RL Agent Monthly PnL')
+rl_drawdown = Gauge('dynasty_rl_drawdown', 'RL Agent Drawdown')
+rl_target = Gauge('dynasty_rl_target_achieved', 'RL Agent Target Achieved (1=Yes, 0=No)')
+open_pos_count = Gauge('dynasty_open_positions', 'Current Open Positions')
+stop_loss_count = Gauge('dynasty_stop_loss_events', 'Recent Stop-Loss Events')
+# Backtest metrics
+backtest_pnl = Gauge('dynasty_backtest_pnl', 'Latest Backtest PnL')
+backtest_sharpe = Gauge('dynasty_backtest_sharpe', 'Latest Backtest Sharpe')
+backtest_drawdown = Gauge('dynasty_backtest_max_drawdown', 'Latest Backtest Max Drawdown')
+backtest_win_rate = Gauge('dynasty_backtest_win_rate', 'Latest Backtest Win Rate')
 
 def collect_metrics():
     conn = sqlite3.connect('trade_tracker.db')
@@ -65,6 +76,44 @@ def collect_metrics():
     # --- End VaR Calculation ---
 
     conn.close()
+
+    # --- RL Analytics Export ---
+    try:
+        import json, os, glob
+        # RL status
+        rl_path = 'data/rl_status.json'
+        if os.path.exists(rl_path):
+            with open(rl_path) as f:
+                rl = json.load(f)
+            rl_pnl.set(rl.get('monthly_pnl', 0))
+            rl_drawdown.set(rl.get('drawdown', 0))
+            rl_target.set(1 if rl.get('target_achieved') else 0)
+        # Open positions
+        pos_path = 'data/open_positions.json'
+        if os.path.exists(pos_path):
+            with open(pos_path) as f:
+                pos = json.load(f)
+            open_pos_count.set(len(pos.get('positions', [])))
+        # Stop-loss events
+        sl_path = 'data/stop_loss_events.json'
+        if os.path.exists(sl_path):
+            with open(sl_path) as f:
+                sl = json.load(f)
+            stop_loss_count.set(len(sl.get('events', [])))
+        # Latest backtest (by mtime)
+        bt_dir = 'data/backtests'
+        if os.path.isdir(bt_dir):
+            files = sorted(glob.glob(os.path.join(bt_dir, '*.json')), key=os.path.getmtime, reverse=True)
+            if files:
+                with open(files[0]) as f:
+                    bt = json.load(f)
+                s = bt.get('summary', {})
+                backtest_pnl.set(s.get('pnl', 0))
+                backtest_sharpe.set(s.get('sharpe', 0))
+                backtest_drawdown.set(s.get('max_drawdown', 0))
+                backtest_win_rate.set(s.get('win_rate', 0))
+    except Exception as e:
+        print(f"Error exporting RL/backtest metrics: {e}")
 
 if __name__ == '__main__':
     # --- Running the Exporter ---

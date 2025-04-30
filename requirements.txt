@@ -8,7 +8,6 @@ openai
 requests
 streamlit
 pandas
-prometheus-client
 Jinja2
 pdfkit
 numpy

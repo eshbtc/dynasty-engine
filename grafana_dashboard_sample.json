@@ -1,0 +1,43 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Dynasty Trading Analytics",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "RL Agent Monthly PnL",
+        "targets": [
+          { "expr": "dynasty_rl_monthly_pnl" }
+        ],
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+      },
+      {
+        "type": "stat",
+        "title": "Open Positions",
+        "targets": [
+          { "expr": "dynasty_open_positions" }
+        ],
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 }
+      },
+      {
+        "type": "stat",
+        "title": "Stop-Loss Events",
+        "targets": [
+          { "expr": "dynasty_stop_loss_events" }
+        ],
+        "gridPos": { "x": 12, "y": 4, "w": 6, "h": 4 }
+      },
+      {
+        "type": "graph",
+        "title": "Backtest Sharpe Ratio",
+        "targets": [
+          { "expr": "dynasty_backtest_sharpe" }
+        ],
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+      }
+    ],
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "10s"
+  }
+}

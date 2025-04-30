@@ -1,0 +1,9 @@
+# Sample Prometheus scrape config for Cloud Run
+scrape_configs:
+  - job_name: 'dynasty-trading-cloudrun'
+    metrics_path: /metrics
+    scheme: https
+    static_configs:
+      - targets: ['YOUR_CLOUD_RUN_URL']
+# Replace YOUR_CLOUD_RUN_URL with the deployed service URL (no path, just host)
+# Example: dynasty-trading-xyz-uc.a.run.app
