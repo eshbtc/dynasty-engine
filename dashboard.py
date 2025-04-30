@@ -5,6 +5,22 @@ import os
 import json
 import datetime
 
+# --- Health endpoint using FastAPI ---
+import threading
+from fastapi import FastAPI
+import uvicorn
+
+app = FastAPI()
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+def run_health_api():
+    uvicorn.run(app, host="0.0.0.0", port=8888, log_level="error")
+
+threading.Thread(target=run_health_api, daemon=True).start()
+
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8008")
 
 st.title("Dynasty Engine Dashboard")
