@@ -17,5 +17,8 @@ EXPOSE 8080
 # Optional: Backend API URL (set at deploy time)
 ENV BACKEND_URL=https://dynasty-engine-594497653266.us-central1.run.app
 
+# Set health check to correct port for watchdog
+ENV DYNASTY_HEALTH_URL=http://localhost:8080/_stcore/health
+
 # Run Streamlit on Cloud Run's port
 CMD streamlit run dashboard.py --server.port $PORT --server.address 0.0.0.0 --server.enableXsrfProtection false --server.enableCORS true
