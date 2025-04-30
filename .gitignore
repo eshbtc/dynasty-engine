@@ -95,6 +95,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+/lp-portal/.env.local
 
 # Spyder project settings
 .spyderproject
