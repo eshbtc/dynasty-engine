@@ -3,7 +3,10 @@
 
 import os
 import json
-from flask import Flask, jsonify, request
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
 import sqlite3
 import pandas as pd
 import datetime
@@ -130,50 +133,57 @@ def backtest_trades():
     for row in trades:
         writer.writerow(row)
     output.seek(0)
-    return send_file(io.BytesIO(output.read().encode()), mimetype='text/csv', as_attachment=True, download_name='trades.csv')
+    return StreamingResponse(output, media_type='text/csv', headers={'Content-Disposition': 'attachment; filename=trades.csv'})
 
 # --- Trades Table Endpoint ---
-@app.route('/api/trades')
-def get_trades():
+@app.get('/api/trades')
+async def get_trades():
     db_path = 'trade_tracker.db'
     if not os.path.exists(db_path):
-        return jsonify({'trades': []})
-    try:
-        conn = sqlite3.connect(db_path)
-        df = pd.read_sql_query('SELECT * FROM trades', conn)
-        conn.close()
-        trades = df.to_dict(orient='records')
-        return jsonify({'trades': trades})
-    except Exception as e:
-        return jsonify({'error': str(e), 'trades': []})
+        return JSONResponse([])
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('SELECT * FROM trades ORDER BY timestamp DESC LIMIT 100')
+    rows = c.fetchall()
+    conn.close()
+    trades = [
+        {
+            'timestamp': r[0], 'ticker': r[1], 'action': r[2], 'quantity': r[3],
+            'strategy_price': r[4], 'avg_fill_price': r[5], 'commission': r[6], 'slippage_bp': r[7], 'status': r[8]
+        }
+        for r in rows
+    ]
+    return JSONResponse(trades)
 
 # --- Agent Decisions Log Endpoint ---
-@app.route('/api/agent-decisions')
-def get_agent_decisions():
+@app.get('/api/agent-decisions')
+async def get_agent_decisions():
     csv_path = 'data/agent_decisions.csv'
     if not os.path.exists(csv_path):
-        return jsonify({'decisions': []})
-    try:
-        df = pd.read_csv(csv_path)
-        decisions = df.tail(50).to_dict(orient='records')
-        return jsonify({'decisions': decisions})
-    except Exception as e:
-        return jsonify({'error': str(e), 'decisions': []})
+        return JSONResponse([])
+    df = pd.read_csv(csv_path)
+    if df.empty:
+        return JSONResponse([])
+    df = df.tail(50)
+    return JSONResponse(df.to_dict(orient='records'))
 
 # --- Bot Command Submission Endpoint ---
-@app.route('/api/commands', methods=['POST'])
-def submit_command():
-    data = request.get_json()
-    command = data.get('command')
+@app.post('/api/commands')
+async def submit_command(command: str):
     if not command:
-        return jsonify({'error': 'Missing command'}), 400
+        return JSONResponse({'error': 'Missing command'}, status_code=400)
     entry = {"timestamp": str(datetime.datetime.now()), "command": command}
     try:
         with open('memory_store.json', 'a') as f:
             f.write(json.dumps(entry) + "\n")
-        return jsonify({'status': 'success'})
+        return JSONResponse({'status': 'success'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+# Health check endpoint
+@app.get('/health')
+async def health():
+    return JSONResponse({'status': 'ok'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8008, debug=True)
+    uvicorn.run(app, host='0.0.0.0', port=8008)
