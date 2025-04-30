@@ -447,24 +447,3 @@ export default function Home() {
         );
 }
 
-// Client-side auth check to replace SSR redirect
-import { useRouter } from 'next/router';
-import { useEffect } from 'react';
-
-export default function Home() {
-    // ...existing state and logic...
-    const router = useRouter();
-    const user = supa.auth.user ? supa.auth.user() : null;
-
-    useEffect(() => {
-        if (typeof window !== 'undefined' && !user) {
-            router.replace('/login');
-        }
-    }, [user, router]);
-
-    if (!user) {
-        return null; // Or a loading spinner
-    }
-
-    // ...rest of your Home component...
-}

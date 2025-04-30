@@ -26,8 +26,8 @@ function MyApp({ Component, pageProps }: AppProps) {
             access_token,
             refresh_token,
           }).then(() => {
-            // Clean up the URL and redirect to the main page
-            window.location.replace('/');
+            // Clean up the URL and redirect to the main page using Next.js router
+            router.replace('/');
           });
         }
       }
