@@ -126,7 +126,7 @@ export default function Home() {
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-gray-500 italic text-center py-4">No reports found in the 'reports' bucket.</p>
+                        <p className="text-gray-500 italic text-center py-4">No reports found in the &apos;reports&apos; bucket.</p>
                     )}
                     {daily.length > 0 && (
                       <div className="mt-6">
