@@ -77,10 +77,8 @@ def _tradier_iv(tkr):
         logger.exception(f"[{tkr}] Tradier Error:")
         return None
 
-def get_iv_rank(tkr:str) -> float | None:
-    """Gets IV rank by trying Polygon then Tradier, with a random fallback."""
-    # Note: The current implementations might not return a standard IV Rank.
-    # _poly_iv currently returns None, _tradier_iv returns a chain-based rank.
+def get_iv_rank(tkr: str) -> float | None:
+    """Gets IV rank by trying Polygon then Tradier. Skips asset if all fail."""
     logger.info(f"Fetching IV Rank for {tkr}...")
     for provider_func, name in [(_poly_iv, 'Polygon'), (_tradier_iv, 'Tradier')]:
         try:
@@ -91,13 +89,9 @@ def get_iv_rank(tkr:str) -> float | None:
             else:
                 logger.info(f"[{tkr}] {name} provider returned None.")
         except Exception as e:
-             logger.exception(f"[{tkr}] Error calling {name} provider:")
-
-    # CRITICAL: Random fallback is dangerous for live trading!
-    # Consider alternatives: returning None, using last known good value, raising an error.
-    fallback_rank = random.randint(20, 60)
-    logger.warning(f"[{tkr}] All IV providers failed or returned None. Falling back to RANDOM IV Rank: {fallback_rank}")
-    return float(fallback_rank)   # fallback if providers fail or return None
+            logger.exception(f"[{tkr}] Error calling {name} provider:")
+    logger.warning(f"[{tkr}] All IV providers failed or returned None. Skipping asset.")
+    return None
 
 # crypto realised vol (Deribit)
 def get_realized_vol(symbol: str = 'BTC', window: int = 30) -> float | None:

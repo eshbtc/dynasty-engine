@@ -22,13 +22,15 @@ class AssetWatcher:
         self.config = config['assets']
 
     async def fetch_asset_data(self, symbol):
-        # Fetch market data (simulate for now)
+        # Fetch market data (live only)
         stock = Stock(symbol, 'SMART', 'USD')
         market_data = self.ib.reqMktData(stock)
         await asyncio.sleep(5)
-
-        price = market_data.last if market_data.last else random.uniform(100, 500)  # Fallback to random
-        return price
+        if market_data.last and not math.isnan(market_data.last):
+            return market_data.last
+        else:
+            logger.warning(f"[AssetWatcher] No valid market_data.last for {symbol}. Skipping asset.")
+            return None
 
 class AssetAllocator:
     def __init__(self, ib_instance, config):
@@ -110,14 +112,13 @@ class AssetAllocator:
         strategy = asset_settings.get('strategy', 'hold')
         logger.info(f"[Dynasty Multi-Asset] Evaluating {symbol} ({contract.symbol}) with strategy {strategy} at price {price:.2f} (Mid: {mid_price:.2f})")
 
-        # --- PLACEHOLDER: Calculate/Fetch Expected Mu and Sigma ---_trade
-        # CRITICAL TODO: Implement Actual Signal Logic Here!
-        # The Kelly fraction calculation below currently uses HARDCODED placeholder values
-        # for expected return (mu) and volatility (sigma). You MUST replace these
-        # with values derived from your actual trading model, market analysis,
-        # or signal generation process for the Kelly sizing to be meaningful.
-        # Failure to do so will result in arbitrary position sizing.
-        expected_mu = asset_settings.get('expected_mu', 0.10) # Example: 10% expected annual return
+        # --- Calculate/Fetch Expected Mu and Sigma ---
+        expected_mu = asset_settings.get('expected_mu', None)
+        sigma = asset_settings.get('sigma', None)
+        if expected_mu is None or sigma is None or expected_mu == 'PLACEHOLDER' or sigma == 'PLACEHOLDER':
+            logger.warning(f"[Dynasty Multi-Asset] Missing or placeholder expected_mu/sigma for {symbol}. Skipping Kelly sizing and trade.")
+            return None
+0) # Example: 10% expected annual return
         expected_sigma = asset_settings.get('expected_sigma', 0.20) # Example: 20% annual volatility
         # --- End Placeholder ---
 

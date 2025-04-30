@@ -11,8 +11,12 @@ from settings import get_settings
 logger = get_logger(__name__)
 
 
+import os
+
 class RiskManager:
     def __init__(self) -> None:
+        self._risk_log_path = os.path.join(os.path.dirname(__file__), '../risk_events.log')
+
         cfg = get_settings()
         self.drawdown_limit_pct: float = 5.0  # configurable later
         self.max_equity: float = 0.0
@@ -57,13 +61,12 @@ class RiskManager:
             )
             try:
                 from metrics_exporter import send_push, ensure_exporter
-
                 ensure_exporter()
                 send_push(msg)
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:
                 logger.error("RiskManager greek push error: %s", exc)
-
             logger.warning(msg)
+            self._log_risk_event(msg)
             self._greek_alerted = True
 
         return over_delta or over_vega
@@ -87,7 +90,6 @@ class RiskManager:
         if should_halt and not getattr(self, "_alerted", False):
             try:
                 from metrics_exporter import send_push, ensure_exporter
-
                 ensure_exporter()
                 msg = (
                     f"🚨 Dynasty HALT – drawdown {dd_pct:.1f}% exceeds limit"
@@ -96,18 +98,23 @@ class RiskManager:
                 )
                 send_push(msg)
                 logger.warning(msg)
-            except Exception as exc:  # pragma: no cover – alert failures non-critical
+                self._log_risk_event(msg)
+            except Exception as exc:
                 logger.error("RiskManager push alert error: %s", exc)
-
             # Mark to avoid spamming until reset
             self._alerted = True
 
         return should_halt, dd_pct
 
+    def _log_risk_event(self, msg: str):
+        try:
+            with open(self._risk_log_path, 'a') as f:
+                f.write(f"{msg}\n")
+        except Exception as e:
+            logger.error(f"Failed to persist risk event: {e}")
 
 # Singleton helper
 _rm: RiskManager | None = None
-
 
 def get_risk_manager() -> RiskManager:
     global _rm

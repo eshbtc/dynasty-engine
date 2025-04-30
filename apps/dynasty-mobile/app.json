@@ -5,15 +5,24 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "sdkVersion": "50.0.0",
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "primaryColor": "#4f46e5",
     "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dynasty.engine"
+      "bundleIdentifier": "com.dynasty.engine",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "extra": {
-      "API_BASE": "https://dynasty.example.com"
-    }
+      "API_BASE": "https://dynasty.example.com",
+      "eas": {
+        "projectId": "d694e5fb-0c13-46a4-a552-13c74437e699"
+      }
+    },
+    "owner": "servsys9"
   }
 }

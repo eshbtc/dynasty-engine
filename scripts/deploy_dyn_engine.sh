@@ -37,7 +37,7 @@ fi
 IMG="$REGION-docker.pkg.dev/$PROJECT/dynasty/${SERVICE}:$(git rev-parse --short HEAD)"
 
 echo "[Deploy] Building container ${IMG} …"
-docker build -t "$IMG" .
+docker build --platform linux/amd64 -t "$IMG" .
 
 echo "[Deploy] Pushing to Artifact Registry …"
 docker push "$IMG"

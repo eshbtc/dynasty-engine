@@ -11,7 +11,7 @@ pushd apps/dynasty-mobile
     echo "EAS CLI not installed. Install with: npm i -g eas-cli" >&2
     exit 1
   fi
-  eas build --profile "$PROFILE" --platform android --non-interactive
+  eas build --profile "$PROFILE" --platform ios
 popd
 
 echo "Mobile build triggered on Expo EAS – upload to Play/TestFlight once complete."

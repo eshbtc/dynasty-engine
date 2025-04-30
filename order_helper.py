@@ -24,48 +24,55 @@ class OrderHelper:
              logger.info("OrderHelper initialized with active IB connection.") # <-- Use logger
 
     async def execute_trade_async(self, contract: Contract, action: str, quantity: int, mid_price: float):
-        """Executes a trade asynchronously using a Market Order and returns execution details."""
-        if not self.ib.isConnected():
-            logger.error("IB connection lost. Cannot place order.") # <-- Use logger
-            return {'status': 'Failed', 'avg_fill_price': 0.0, 'commission': 0.0, 'slippage_bp': 0.0}
+        """Executes a trade asynchronously using a Market Order and returns execution details. Retries up to 3 times if failed."""
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            if not self.ib.isConnected():
+                logger.error(f"IB connection lost. Cannot place order. Attempt {attempt}/{max_attempts}")
+                if attempt == max_attempts:
+                    return {'status': 'Failed', 'avg_fill_price': 0.0, 'commission': 0.0, 'slippage_bp': 0.0}
+                await self.ib.sleep(2)
+                continue
 
-        order = MarketOrder(action, quantity)
-        trade = self.ib.placeOrder(contract, order)
-        logger.info(f"Placed Market Order: {action} {quantity} {contract.symbol}") # <-- Use logger
+            order = MarketOrder(action, quantity)
+            trade = self.ib.placeOrder(contract, order)
+            logger.info(f"Placed Market Order: {action} {quantity} {contract.symbol} (Attempt {attempt}/{max_attempts})")
 
-        # --- Wait for terminal state --- Wait up to 60 seconds
-        start_time = time.time()
-        while trade.isActive() and (time.time() - start_time < 60):
-            await self.ib.sleep(1) # Use ib.sleep for cooperative multitasking
+            # --- Wait for terminal state --- Wait up to 60 seconds
+            start_time = time.time()
+            while trade.isActive() and (time.time() - start_time < 60):
+                await self.ib.sleep(1)
 
-        if trade.isDone():
-            avg_fill_price = trade.orderStatus.avgFillPrice
-            commission = trade.commissionReport.commission if trade.commissionReport else 0.0
-            status = trade.orderStatus.status
+            if trade.isDone():
+                avg_fill_price = trade.orderStatus.avgFillPrice
+                commission = trade.commissionReport.commission if trade.commissionReport else 0.0
+                status = trade.orderStatus.status
 
-            # Calculate slippage against the mid-price at the time of decision
-            slippage = 0.0
-            if mid_price and mid_price > 0 and avg_fill_price and avg_fill_price > 0:
-                if action == 'BUY':
-                    slippage = avg_fill_price - mid_price
-                elif action == 'SELL':
-                    slippage = mid_price - avg_fill_price
-                
-                slippage_bp = (slippage / mid_price) * 10000
+                # Calculate slippage against the mid-price at the time of decision
+                slippage = 0.0
+                if mid_price and mid_price > 0 and avg_fill_price and avg_fill_price > 0:
+                    if action == 'BUY':
+                        slippage = avg_fill_price - mid_price
+                    elif action == 'SELL':
+                        slippage = mid_price - avg_fill_price
+                    slippage_bp = (slippage / mid_price) * 10000
+                else:
+                    slippage_bp = 0.0
+
+                logger.info(f"Trade Done. Status: {status}, Fill Price: {avg_fill_price:.2f}, Mid Price: {mid_price:.2f}, Slippage: {slippage:.2f} ({slippage_bp:.2f} bp), Commission: {commission:.2f}")
+                return {'status': status, 'avg_fill_price': avg_fill_price, 'commission': commission, 'slippage_bp': slippage_bp}
             else:
-                slippage_bp = 0.0 # Cannot calculate if mid_price or fill_price is invalid
-
-            logger.info(f"Trade Done. Status: {status}, Fill Price: {avg_fill_price:.2f}, Mid Price: {mid_price:.2f}, Slippage: {slippage:.2f} ({slippage_bp:.2f} bp), Commission: {commission:.2f}") # <-- Use logger
-            return {'status': status, 'avg_fill_price': avg_fill_price, 'commission': commission, 'slippage_bp': slippage_bp}
-        else:
-            # Handle timeout or other non-Done states (Cancelled, Error etc.)
-            status = trade.orderStatus.status
-            logger.warning(f"Trade did not complete successfully. Status: {status}") # <-- Use logger
-            # Attempt to cancel if still active
-            if trade.isActive():
-                self.ib.cancelOrder(trade.order)
-                logger.info(f"Attempted to cancel order {trade.order.orderId}") # <-- Use logger
-            return {'status': status, 'avg_fill_price': 0.0, 'commission': 0.0, 'slippage_bp': 0.0}
+                status = trade.orderStatus.status
+                logger.warning(f"Trade did not complete successfully. Status: {status} (Attempt {attempt}/{max_attempts})")
+                if trade.isActive():
+                    self.ib.cancelOrder(trade.order)
+                    logger.info(f"Attempted to cancel order {trade.order.orderId}")
+                if attempt == max_attempts:
+                    return {'status': status, 'avg_fill_price': 0.0, 'commission': 0.0, 'slippage_bp': 0.0}
+                await self.ib.sleep(2)
+        # Should never reach here
+        logger.error(f"Trade execution failed after {max_attempts} attempts.")
+        return {'status': 'Failed', 'avg_fill_price': 0.0, 'commission': 0.0, 'slippage_bp': 0.0}
 
 
     # --- Original limit_or_vwap (can be kept for reference or adapted/removed) ---
