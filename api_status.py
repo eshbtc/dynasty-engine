@@ -12,20 +12,24 @@ from dyn_engine.logging_config import get_logger
 logger = get_logger(__name__)
 
 app = FastAPI()
-engine_app = EngineApp()
+
+# Delay engine_app instantiation until startup
+engine_app = None # Initialize as None globally
 engine_task = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Start the Dynasty Engine background task when FastAPI starts."""
-    global engine_task
+    """Instantiate EngineApp and start its background task when FastAPI starts."""
+    global engine_app, engine_task
     logger.info("--- FastAPI startup_event STARTING ---")
     try:
-        logger.info("Attempting to create EngineApp background task...")
+        logger.info("Instantiating EngineApp...")
+        engine_app = EngineApp() # Instantiate here
+        logger.info("EngineApp instantiated. Attempting to create background task...")
         engine_task = asyncio.create_task(engine_app.run())
-        logger.info("EngineApp background task creation attempted (check task for errors). STARTUP COMPLETE.")
+        logger.info("EngineApp background task creation attempted. STARTUP COMPLETE.")
     except Exception as e:
-        logger.exception("--- ERROR CREATING ENGINEAPP TASK IN STARTUP_EVENT ---")
+        logger.exception("--- ERROR DURING ENGINEAPP INSTANTIATION OR TASK CREATION IN STARTUP_EVENT ---")
 
 # TODO: Add shutdown handler if needed to gracefully cancel engine_task
 # @app.on_event("shutdown")
