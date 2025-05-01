@@ -23,4 +23,5 @@ COPY . .
 # Run Flask API (with Prometheus metrics) on the port specified by Cloud Run
 # Note: EXPOSE is documentation; Cloud Run uses the PORT env var directly.
 # EXPOSE 8080
-CMD exec gunicorn --bind 0.0.0.0:${PORT:-8080} -w 1 -k uvicorn.workers.UvicornWorker api_status:app
+# CMD exec gunicorn --bind 0.0.0.0:${PORT:-8080} -w 1 -k uvicorn.workers.UvicornWorker api_status:app
+CMD ["python", "api_status.py"] # Temporary diagnostic CMD
