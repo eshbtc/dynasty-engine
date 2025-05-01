@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 import asyncio
 from dyn_engine.engine_app import EngineApp
 from dyn_engine.logging_config import get_logger
+import sys
 
 logger = get_logger(__name__)
 
@@ -21,15 +22,15 @@ engine_task = None
 async def startup_event():
     """Instantiate EngineApp and start its background task when FastAPI starts."""
     global engine_app, engine_task
-    logger.info("--- FastAPI startup_event STARTING ---")
+    print("--- FastAPI startup_event STARTING ---", file=sys.stderr)
     try:
-        logger.info("Instantiating EngineApp...")
+        print("Instantiating EngineApp...", file=sys.stderr)
         engine_app = EngineApp() # Instantiate here
-        logger.info("EngineApp instantiated. Attempting to create background task...")
+        print("EngineApp instantiated. Attempting to create background task...", file=sys.stderr)
         engine_task = asyncio.create_task(engine_app.run())
-        logger.info("EngineApp background task creation attempted. STARTUP COMPLETE.")
+        print("EngineApp background task creation attempted. STARTUP COMPLETE.", file=sys.stderr)
     except Exception as e:
-        logger.exception("--- ERROR DURING ENGINEAPP INSTANTIATION OR TASK CREATION IN STARTUP_EVENT ---")
+        print(f"--- ERROR DURING ENGINEAPP INSTANTIATION OR TASK CREATION IN STARTUP_EVENT: {e} ---", file=sys.stderr)
 
 # TODO: Add shutdown handler if needed to gracefully cancel engine_task
 # @app.on_event("shutdown")
