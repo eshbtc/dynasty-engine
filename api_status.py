@@ -25,9 +25,9 @@ async def startup_event():
     print("--- FastAPI startup_event STARTING ---", file=sys.stderr)
     try:
         print("Instantiating EngineApp...", file=sys.stderr)
-        engine_app = EngineApp() # Instantiate here
+        # engine_app = EngineApp() # Instantiate here
         print("EngineApp instantiated. Attempting to create background task...", file=sys.stderr)
-        engine_task = asyncio.create_task(engine_app.run())
+        # engine_task = asyncio.create_task(engine_app.run())
         print("EngineApp background task creation attempted. STARTUP COMPLETE.", file=sys.stderr)
     except Exception as e:
         print(f"--- ERROR DURING ENGINEAPP INSTANTIATION OR TASK CREATION IN STARTUP_EVENT: {e} ---", file=sys.stderr)
