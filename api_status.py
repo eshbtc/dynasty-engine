@@ -14,19 +14,17 @@ import datetime
 # --- Prometheus Metrics Integration ---
 try:
     from exporter_prom import collect_metrics
+    # Wrap the FastAPI app with Prometheus middleware if available
+    # Note: This assumes exporter_prom provides a compatible WSGI app
     def metrics_before_response(environ, start_response):
-        # Run metrics collection before serving metrics
-        try:
-            # Run in a thread to avoid blocking
-            t = threading.Thread(target=collect_metrics)
-            t.start()
-            t.join(timeout=5)
-        except Exception as e:
-            print(f"Metrics collection error: {e}")
-        return make_wsgi_app()(environ, start_response)
-    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {'/metrics': metrics_before_response})
-except ImportError as e:
-    print(f"Prometheus integration failed: {e}")
+        # Placeholder: Actual metric collection would go here
+        collect_metrics()
+        # Return a minimal WSGI app response or delegate to Prometheus's app
+        prometheus_app = make_wsgi_app()
+        return prometheus_app(environ, start_response)
+except ImportError:
+    print("Prometheus exporter not found, skipping /metrics endpoint.")
+    pass # Prometheus exporter not installed or configured
 
 # --- Stop-Loss Events Endpoint ---
 @app.route('/api/stop_loss_events')
