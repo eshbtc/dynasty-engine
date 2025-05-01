@@ -5,8 +5,35 @@ import os
 import json
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+import asyncio
+from dyn_engine.engine_app import EngineApp
+from dyn_engine.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 app = FastAPI()
+engine_app = EngineApp()
+engine_task = None
+
+@app.on_event("startup")
+async def startup_event():
+    """Start the Dynasty Engine background task when FastAPI starts."""
+    global engine_task
+    logger.info("FastAPI startup: Launching EngineApp background task...")
+    engine_task = asyncio.create_task(engine_app.run())
+    logger.info("EngineApp background task launched.")
+
+# TODO: Add shutdown handler if needed to gracefully cancel engine_task
+# @app.on_event("shutdown")
+# async def shutdown_event():
+#     if engine_task:
+#         engine_task.cancel()
+#         try:
+#             await engine_task
+#         except asyncio.CancelledError:
+#             logger.info("EngineApp task cancelled successfully.")
+#     await engine_app._disconnect_ib() # Ensure IB disconnects
+
 import sqlite3
 import pandas as pd
 import datetime
