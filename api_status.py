@@ -19,9 +19,13 @@ engine_task = None
 async def startup_event():
     """Start the Dynasty Engine background task when FastAPI starts."""
     global engine_task
-    logger.info("FastAPI startup: Launching EngineApp background task...")
-    engine_task = asyncio.create_task(engine_app.run())
-    logger.info("EngineApp background task launched.")
+    logger.info("--- FastAPI startup_event STARTING ---")
+    try:
+        logger.info("Attempting to create EngineApp background task...")
+        engine_task = asyncio.create_task(engine_app.run())
+        logger.info("EngineApp background task creation attempted (check task for errors). STARTUP COMPLETE.")
+    except Exception as e:
+        logger.exception("--- ERROR CREATING ENGINEAPP TASK IN STARTUP_EVENT ---")
 
 # TODO: Add shutdown handler if needed to gracefully cancel engine_task
 # @app.on_event("shutdown")
